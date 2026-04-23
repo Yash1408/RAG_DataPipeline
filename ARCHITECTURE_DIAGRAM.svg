@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1000" font-family="-apple-system, Segoe UI, Inter, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#059669"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/>
+    </marker>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000" flood-opacity="0.12"/>
+    </filter>
+    <style>
+      .title   { font-size:22px; font-weight:700; fill:#0f172a; }
+      .sub     { font-size:12px; fill:#64748b; }
+      .layer   { font-size:11px; font-weight:700; fill:#334155; letter-spacing:1px; text-transform:uppercase; }
+      .box     { font-size:13px; font-weight:600; fill:#0f172a; }
+      .small   { font-size:11px; fill:#475569; }
+      .tag     { font-size:10px; font-weight:600; fill:#ffffff; }
+      .kpi     { font-size:10px; font-weight:600; fill:#059669; }
+      .warn    { font-size:10px; font-weight:600; fill:#dc2626; }
+      .flow    { stroke:#475569; stroke-width:1.6; fill:none; }
+      .flow-g  { stroke:#059669; stroke-width:1.6; fill:none; stroke-dasharray: 4 3; }
+      .flow-r  { stroke:#dc2626; stroke-width:1.6; fill:none; }
+      .dim     { stroke:#cbd5e1; stroke-width:1; fill:none; stroke-dasharray: 3 3; }
+    </style>
+  </defs>
+
+  <!-- Header -->
+  <text x="40" y="42" class="title">Enterprise Document Intelligence — Production Architecture</text>
+  <text x="40" y="62" class="sub">PDF ingestion → verbatim key-value extraction with page citations · zero-hallucination gate · multi-tenant, autoscaling, GPU scale-to-zero</text>
+
+  <!-- ============================================================= -->
+  <!-- LAYER 1: Clients                                                -->
+  <!-- ============================================================= -->
+  <text x="40" y="100" class="layer">1 · Clients</text>
+
+  <g filter="url(#shadow)">
+    <rect x="40" y="110" width="220" height="70" rx="8" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+    <text x="56" y="134" class="box">Streamlit App (local)</text>
+    <text x="56" y="152" class="small">Upload PDF → JSON</text>
+    <text x="56" y="168" class="small">Local LLM + embeddings · offline-capable</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="280" y="110" width="220" height="70" rx="8" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+    <text x="296" y="134" class="box">SaaS / API clients</text>
+    <text x="296" y="152" class="small">Browser, curl, SDKs</text>
+    <text x="296" y="168" class="small">OAuth2 / OIDC → JWT</text>
+  </g>
+
+  <!-- ============================================================= -->
+  <!-- LAYER 2: Edge                                                    -->
+  <!-- ============================================================= -->
+  <text x="40" y="220" class="layer">2 · Edge · TLS · DDoS</text>
+  <g filter="url(#shadow)">
+    <rect x="40" y="230" width="820" height="60" rx="8" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.5"/>
+    <text x="60" y="254" class="box">CloudFront  ·  AWS WAF (OWASP Top-10)  ·  Application Load Balancer</text>
+    <text x="60" y="274" class="small">TLS 1.2+ · HSTS · per-IP rate bucket · bot detection · region failover</text>
+  </g>
+
+  <!-- ============================================================= -->
+  <!-- LAYER 3: API Gateway                                             -->
+  <!-- ============================================================= -->
+  <text x="40" y="320" class="layer">3 · API Gateway (Kong) — auth, rate limit, cache</text>
+  <g filter="url(#shadow)">
+    <rect x="40" y="330" width="820" height="90" rx="8" fill="#fff7ed" stroke="#f97316" stroke-width="1.5"/>
+    <text x="60" y="354" class="box">Kong API Gateway</text>
+
+    <!-- Plugin pills -->
+    <rect x="60" y="366" width="90" height="22" rx="11" fill="#f97316"/>
+    <text x="105" y="381" class="tag" text-anchor="middle">JWT auth</text>
+
+    <rect x="156" y="366" width="110" height="22" rx="11" fill="#f97316"/>
+    <text x="211" y="381" class="tag" text-anchor="middle">Rate limit · tenant</text>
+
+    <rect x="272" y="366" width="100" height="22" rx="11" fill="#f97316"/>
+    <text x="322" y="381" class="tag" text-anchor="middle">Proxy cache 5s</text>
+
+    <rect x="378" y="366" width="110" height="22" rx="11" fill="#f97316"/>
+    <text x="433" y="381" class="tag" text-anchor="middle">Size limit · 32MB</text>
+
+    <rect x="494" y="366" width="100" height="22" rx="11" fill="#f97316"/>
+    <text x="544" y="381" class="tag" text-anchor="middle">Correlation-id</text>
+
+    <rect x="600" y="366" width="100" height="22" rx="11" fill="#f97316"/>
+    <text x="650" y="381" class="tag" text-anchor="middle">Bot detection</text>
+
+    <text x="60" y="408" class="small">Invalid tokens die at the edge · 100/min, 5k/hour, 100k/day per tenant · Redis-backed counters</text>
+  </g>
+
+  <!-- ============================================================= -->
+  <!-- LAYER 4: API Tier                                                -->
+  <!-- ============================================================= -->
+  <text x="40" y="450" class="layer">4 · Stateless API Tier (FastAPI) — HPA: CPU + RPS</text>
+  <g filter="url(#shadow)">
+    <rect x="40" y="460" width="820" height="90" rx="8" fill="#fef2f2" stroke="#ef4444" stroke-width="1.5"/>
+    <g>
+      <rect x="60"  y="478" width="120" height="56" rx="6" fill="#ffffff" stroke="#ef4444"/>
+      <text x="120" y="498" class="box" text-anchor="middle">FastAPI pod</text>
+      <text x="120" y="514" class="small" text-anchor="middle">submit · poll</text>
+      <text x="120" y="528" class="small" text-anchor="middle">auth · idempotency</text>
+    </g>
+    <g>
+      <rect x="196" y="478" width="120" height="56" rx="6" fill="#ffffff" stroke="#ef4444"/>
+      <text x="256" y="498" class="box" text-anchor="middle">FastAPI pod</text>
+      <text x="256" y="514" class="small" text-anchor="middle">submit · poll</text>
+      <text x="256" y="528" class="small" text-anchor="middle">auth · idempotency</text>
+    </g>
+    <g>
+      <rect x="332" y="478" width="120" height="56" rx="6" fill="#ffffff" stroke="#ef4444"/>
+      <text x="392" y="498" class="box" text-anchor="middle">FastAPI pod</text>
+      <text x="392" y="514" class="small" text-anchor="middle">submit · poll</text>
+      <text x="392" y="528" class="small" text-anchor="middle">auth · idempotency</text>
+    </g>
+    <text x="475" y="513" class="sub">... scale 3 → 50 ...</text>
+    <text x="620" y="498" class="small">HPA: CPU &gt; 70% OR RPS &gt; 200/pod</text>
+    <text x="620" y="516" class="small">ALB round-robin across pods</text>
+    <text x="620" y="534" class="small">Stateless · zero session affinity</text>
+  </g>
+
+  <!-- ============================================================= -->
+  <!-- LAYER 5: Message Queue + Cache + Audit                          -->
+  <!-- ============================================================= -->
+  <text x="40" y="580" class="layer">5 · Message queue · Cache · Audit store</text>
+
+  <g filter="url(#shadow)">
+    <rect x="40" y="590" width="260" height="120" rx="8" fill="#f0f9ff" stroke="#0284c7" stroke-width="1.5"/>
+    <text x="60" y="614" class="box">Redis — Celery broker</text>
+    <text x="60" y="634" class="small">Queues: extract.free, extract.premium</text>
+    <text x="60" y="652" class="small">task_acks_late · at-least-once</text>
+    <text x="60" y="670" class="small">prefetch=1 · fair dispatch</text>
+    <text x="60" y="696" class="kpi">▲ KEDA scales workers on list length</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="320" y="590" width="260" height="120" rx="8" fill="#f0f9ff" stroke="#0284c7" stroke-width="1.5"/>
+    <text x="340" y="614" class="box">Redis — content-addressed cache</text>
+    <text x="340" y="634" class="small">parse:sha256(pdf)</text>
+    <text x="340" y="652" class="small">emb:model:sha256(text)</text>
+    <text x="340" y="670" class="small">llm:model:sha256(q,page)</text>
+    <text x="340" y="696" class="kpi">✓ Don't re-embed the same query</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="600" y="590" width="260" height="120" rx="8" fill="#f0f9ff" stroke="#0284c7" stroke-width="1.5"/>
+    <text x="620" y="614" class="box">Postgres — audit + jobs</text>
+    <text x="620" y="634" class="small">append-only: job, tenant, sha256,</text>
+    <text x="620" y="652" class="small">model, latency, verification_pass</text>
+    <text x="620" y="670" class="small">S3 Object Lock for WORM</text>
+    <text x="620" y="696" class="kpi">✓ SOX-grade traceability</text>
+  </g>
+
+  <!-- ============================================================= -->
+  <!-- LAYER 6: GPU Workers                                             -->
+  <!-- ============================================================= -->
+  <text x="40" y="740" class="layer">6 · GPU Worker Pool — Celery + local Ollama/vLLM · KEDA autoscale 0→20 · Karpenter nodes</text>
+
+  <g filter="url(#shadow)">
+    <rect x="40" y="750" width="820" height="210" rx="8" fill="#faf5ff" stroke="#9333ea" stroke-width="1.5"/>
+
+    <!-- Worker A -->
+    <g transform="translate(60, 770)">
+      <rect width="240" height="175" rx="8" fill="#ffffff" stroke="#9333ea"/>
+      <text x="12" y="22" class="box">GPU Worker pod · node g5.xlarge</text>
+      <rect x="12" y="34" width="106" height="24" rx="4" fill="#ede9fe" stroke="#a78bfa"/>
+      <text x="65" y="51" class="small" text-anchor="middle">Celery worker</text>
+      <rect x="124" y="34" width="106" height="24" rx="4" fill="#ede9fe" stroke="#a78bfa"/>
+      <text x="177" y="51" class="small" text-anchor="middle">Ollama · llama3.1</text>
+      <text x="12" y="80" class="small">localhost:11434 · same pod</text>
+
+      <!-- Circuit breakers -->
+      <rect x="12" y="92" width="70" height="22" rx="11" fill="#fee2e2" stroke="#dc2626"/>
+      <text x="47" y="107" class="warn" text-anchor="middle">CB · LLM</text>
+      <rect x="86" y="92" width="70" height="22" rx="11" fill="#fee2e2" stroke="#dc2626"/>
+      <text x="121" y="107" class="warn" text-anchor="middle">CB · OCR</text>
+      <rect x="160" y="92" width="70" height="22" rx="11" fill="#fee2e2" stroke="#dc2626"/>
+      <text x="195" y="107" class="warn" text-anchor="middle">CB · S3</text>
+
+      <text x="12" y="134" class="small">pybreaker · per-dep isolation</text>
+      <text x="12" y="152" class="small">open → fallback to deterministic</text>
+      <text x="12" y="168" class="kpi">No single dep breaks the job</text>
+    </g>
+
+    <!-- Worker B -->
+    <g transform="translate(310, 770)">
+      <rect width="240" height="175" rx="8" fill="#ffffff" stroke="#9333ea"/>
+      <text x="12" y="22" class="box">GPU Worker pod · node g5.xlarge</text>
+      <rect x="12" y="34" width="106" height="24" rx="4" fill="#ede9fe" stroke="#a78bfa"/>
+      <text x="65" y="51" class="small" text-anchor="middle">Celery worker</text>
+      <rect x="124" y="34" width="106" height="24" rx="4" fill="#ede9fe" stroke="#a78bfa"/>
+      <text x="177" y="51" class="small" text-anchor="middle">vLLM · Llama-70B</text>
+      <text x="12" y="80" class="small">Same pattern · different model</text>
+      <text x="12" y="100" class="small">Model-agnostic pipeline</text>
+      <text x="12" y="118" class="small">Provider interface = drop-in swap</text>
+      <text x="12" y="144" class="kpi">Load balanced: round-robin via</text>
+      <text x="12" y="160" class="kpi">broker; no sticky binding</text>
+    </g>
+
+    <!-- Autoscale panel -->
+    <g transform="translate(580, 770)">
+      <rect width="260" height="175" rx="8" fill="#ffffff" stroke="#9333ea"/>
+      <text x="12" y="22" class="box">Autoscaling (3-tier)</text>
+
+      <rect x="12" y="36" width="236" height="40" rx="6" fill="#f5f3ff" stroke="#a78bfa"/>
+      <text x="22" y="54" class="small">① KEDA ScaledObject</text>
+      <text x="22" y="70" class="small">pods 0 → 20 on redis queue depth</text>
+
+      <rect x="12" y="82" width="236" height="40" rx="6" fill="#f5f3ff" stroke="#a78bfa"/>
+      <text x="22" y="100" class="small">② Karpenter NodePool</text>
+      <text x="22" y="116" class="small">g5/g6 · spot+on-demand · 24h TTL</text>
+
+      <rect x="12" y="128" width="236" height="40" rx="6" fill="#f5f3ff" stroke="#a78bfa"/>
+      <text x="22" y="146" class="small">③ Consolidation</text>
+      <text x="22" y="162" class="small">idle → $0 · scale to zero</text>
+    </g>
+  </g>
+
+  <!-- ============================================================= -->
+  <!-- LAYER 7: Object store                                            -->
+  <!-- ============================================================= -->
+  <g filter="url(#shadow)">
+    <rect x="40" y="976" width="820" height="14" rx="4" fill="#f1f5f9" stroke="#94a3b8"/>
+    <text x="880" y="988" class="small" dominant-baseline="middle" text-anchor="start">S3 · SSE-AES256 · VPC endpoint · 30d lifecycle  (raw PDFs, keyed by sha256)</text>
+  </g>
+
+  <!-- ============================================================= -->
+  <!-- RIGHT COLUMN: Observability + Engine                             -->
+  <!-- ============================================================= -->
+  <g filter="url(#shadow)">
+    <rect x="880" y="110" width="480" height="350" rx="8" fill="#f8fafc" stroke="#334155" stroke-width="1.5"/>
+    <text x="900" y="136" class="box">Zero-hallucination engine (shared by Streamlit + workers)</text>
+    <text x="900" y="154" class="small">`engine/` — one module, two runtimes.</text>
+
+    <!-- Pipeline steps -->
+    <g transform="translate(900, 170)">
+      <rect width="440" height="28" rx="6" fill="#e2e8f0"/>
+      <text x="12" y="18" class="small">① Layout parse (pdfplumber) → Item/Note state machine · TableBlock</text>
+
+      <rect y="34" width="440" height="28" rx="6" fill="#e2e8f0"/>
+      <text x="12" y="52" class="small">② OCR fallback (Textract) if text density &lt; 0.05 chars/kpx²</text>
+
+      <rect y="68" width="440" height="28" rx="6" fill="#e2e8f0"/>
+      <text x="12" y="86" class="small">③ Hybrid retrieval: BM25 ⊕ local embeddings · RRF fusion</text>
+
+      <rect y="102" width="440" height="28" rx="6" fill="#e2e8f0"/>
+      <text x="12" y="120" class="small">④ Grounded LLM extract · temp=0 · JSON-schema constrained</text>
+
+      <rect y="136" width="440" height="34" rx="6" fill="#dcfce7" stroke="#16a34a"/>
+      <text x="12" y="157" class="box" fill="#14532d">⑤ Verbatim verification gate — THE hallucination guard</text>
+
+      <rect y="174" width="440" height="28" rx="6" fill="#e2e8f0"/>
+      <text x="12" y="192" class="small">⑥ Emit JSON payload + citations</text>
+    </g>
+
+    <text x="900" y="390" class="box">Local mode (Streamlit):</text>
+    <text x="900" y="408" class="small">sentence-transformers · Ollama (optional) · diskcache · in-proc breaker</text>
+    <text x="900" y="432" class="box">Prod mode:</text>
+    <text x="900" y="450" class="small">same code · Redis cache · pybreaker · Celery · GPU pool</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="880" y="480" width="480" height="200" rx="8" fill="#fefce8" stroke="#ca8a04" stroke-width="1.5"/>
+    <text x="900" y="506" class="box">Observability</text>
+    <text x="900" y="526" class="small">OpenTelemetry spans end-to-end · correlation-id on every log</text>
+    <text x="900" y="548" class="small">Prometheus metrics:</text>
+    <text x="910" y="566" class="small">• extraction_latency_seconds {field}</text>
+    <text x="910" y="582" class="small">• verbatim_verification_failures_total   ← alert: canary for drift</text>
+    <text x="910" y="598" class="small">• llm_tokens_total · ocr_fallback_total</text>
+    <text x="910" y="614" class="small">• breaker_state {name, state}</text>
+    <text x="900" y="640" class="small">Grafana dashboards per tenant · PagerDuty on SLO burn</text>
+    <text x="900" y="662" class="small">Append-only audit to Postgres + S3 Object Lock (WORM)</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="880" y="700" width="480" height="260" rx="8" fill="#ecfeff" stroke="#0891b2" stroke-width="1.5"/>
+    <text x="900" y="726" class="box">Security posture</text>
+    <text x="900" y="748" class="small">• JWT at the gateway · scopes: extract:read / write / admin</text>
+    <text x="900" y="766" class="small">• Tenant isolation · cross-tenant job_id → 404, not 403</text>
+    <text x="900" y="784" class="small">• TLS 1.2+ · HSTS · WAF (OWASP Top-10)</text>
+    <text x="900" y="802" class="small">• MIME allow-list · 100MB hard cap · sha256 = storage key</text>
+    <text x="900" y="820" class="small">• S3 SSE-AES256 · VPC endpoint · lifecycle 30d</text>
+    <text x="900" y="838" class="small">• Secrets Manager (rotated) · PII redaction in logs</text>
+
+    <text x="900" y="868" class="box">Zero-hallucination contract</text>
+    <text x="900" y="886" class="small">verbatim value MUST substring-match its cited page.</text>
+    <text x="900" y="902" class="small">Failure → value is dropped (never paraphrased).</text>
+    <text x="900" y="918" class="small">Citation: page · item · note · table · row · column · surrounding text.</text>
+    <text x="900" y="942" class="kpi">Audit-grade · Every number traceable to a table cell.</text>
+  </g>
+
+  <!-- ============================================================= -->
+  <!-- Flow arrows                                                      -->
+  <!-- ============================================================= -->
+  <!-- clients -> edge -->
+  <path class="flow" d="M 150 180 V 230" marker-end="url(#arrow)"/>
+  <path class="flow" d="M 390 180 V 230" marker-end="url(#arrow)"/>
+  <!-- edge -> gateway -->
+  <path class="flow" d="M 450 290 V 330" marker-end="url(#arrow)"/>
+  <!-- gateway -> api -->
+  <path class="flow" d="M 450 420 V 460" marker-end="url(#arrow)"/>
+  <!-- api -> broker -->
+  <path class="flow" d="M 170 550 V 590" marker-end="url(#arrow)"/>
+  <!-- api -> cache -->
+  <path class="flow-g" d="M 390 550 V 590" marker-end="url(#arrow-green)"/>
+  <!-- api -> audit -->
+  <path class="flow" d="M 640 550 V 590" marker-end="url(#arrow)"/>
+  <!-- broker -> workers -->
+  <path class="flow" d="M 170 710 V 770" marker-end="url(#arrow)"/>
+  <!-- workers <-> cache -->
+  <path class="flow-g" d="M 400 770 V 710" marker-end="url(#arrow-green)"/>
+  <path class="flow-g" d="M 440 710 V 770" marker-end="url(#arrow-green)"/>
+  <!-- workers -> S3 -->
+  <path class="flow" d="M 430 945 V 976" marker-end="url(#arrow)"/>
+
+  <!-- Legend -->
+  <g transform="translate(40, 970)">
+    <rect width="820" height="1" fill="#e2e8f0"/>
+  </g>
+  <g transform="translate(40, 984)">
+    <line x1="0" y1="0" x2="24" y2="0" class="flow"/>
+    <text x="30" y="4" class="small">request flow</text>
+    <line x1="110" y1="0" x2="134" y2="0" class="flow-g"/>
+    <text x="140" y="4" class="small">cache read/write (saves GPU)</text>
+    <line x1="320" y1="0" x2="344" y2="0" class="flow-r"/>
+    <text x="350" y="4" class="small">circuit-break / fallback</text>
+  </g>
+</svg>

@@ -1,0 +1,56 @@
+# Kong API Gateway configuration (declarative). Terminates TLS, validates
+# JWTs (so invalid tokens never touch the API pods), rate-limits per
+# consumer, and does request-size enforcement before the body is buffered.
+_format_version: "3.0"
+
+services:
+  - name: docai-api
+    url: http://docai-api.docai.svc.cluster.local
+    routes:
+      - name: extractions
+        paths: ["/v1/extractions"]
+        strip_path: false
+        methods: ["GET", "POST"]
+
+plugins:
+  # Auth: JWT (RS256 via JWKS from IdP)
+  - name: jwt
+    config:
+      uri_param_names: []
+      key_claim_name: kid
+      claims_to_verify: ["exp"]
+
+  # Per-consumer rate limits — tenant plan decides the bucket.
+  - name: rate-limiting-advanced
+    config:
+      limit: [100, 5000, 100000]       # 100/min, 5k/hour, 100k/day
+      window_size: [60, 3600, 86400]
+      identifier: consumer
+      strategy: redis
+      redis: { host: redis, port: 6379 }
+      sync_rate: 1
+
+  # Request size — small requests go through; giant PDFs must hit the
+  # signed-upload endpoint which writes straight to S3.
+  - name: request-size-limiting
+    config: { allowed_payload_size: 32, size_unit: megabytes }
+
+  # Per-IP DDoS damper (cheap, noisy-neighbor guard).
+  - name: rate-limiting
+    config: { second: 20, policy: local }
+
+  # Response cache for idempotent GETs (status polls) — dramatically cuts
+  # Redis/DB load when thousands of clients poll.
+  - name: proxy-cache
+    config:
+      request_method: ["GET"]
+      response_code: [200, 202]
+      cache_ttl: 5
+      strategy: memory
+
+  # WAF / bot-score (Kong plugin, or terminate at CloudFront WAF).
+  - name: bot-detection
+
+  # Correlation-id for tracing.
+  - name: correlation-id
+    config: { header_name: X-Request-ID, generator: uuid }

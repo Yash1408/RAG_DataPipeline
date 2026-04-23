@@ -1,0 +1,54 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+build/
+dist/
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# --- Virtual envs ---
+.venv/
+venv/
+env/
+ENV/
+.conda/
+
+# --- IDE / editor ---
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# --- Streamlit ---
+.streamlit/secrets.toml
+
+# --- Local cache & store (content-addressed; regenerated on demand) ---
+.cache/
+~/.cache/doc-intel/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# --- Model downloads ---
+models/
+*.gguf
+*.bin
+*.pt
+*.safetensors
+
+# --- Test / coverage ---
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# --- OS ---
+Thumbs.db

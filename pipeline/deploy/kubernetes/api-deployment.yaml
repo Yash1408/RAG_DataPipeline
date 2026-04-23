@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docai-api
+  namespace: docai
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxUnavailable: 1, maxSurge: 2 }
+  selector:
+    matchLabels: { app: docai, role: api }
+  template:
+    metadata:
+      labels: { app: docai, role: api }
+      annotations: { prometheus.io/scrape: "true", prometheus.io/port: "8000" }
+    spec:
+      serviceAccountName: docai-api
+      containers:
+        - name: api
+          image: ghcr.io/acme/docai-api:1.0.0
+          ports: [{ containerPort: 8000, name: http }]
+          env:
+            - { name: JWT_SECRET_KEY, valueFrom: { secretKeyRef: { name: docai-jwt, key: key } } }
+            - { name: CELERY_BROKER_URL, value: redis://redis:6379/0 }
+            - { name: CACHE_BACKEND, value: redis }
+            - { name: REDIS_URL, value: redis://redis:6379/2 }
+          resources:
+            requests: { cpu: "250m", memory: "512Mi" }
+            limits:   { cpu: "1",    memory: "1Gi"  }
+          readinessProbe: { httpGet: { path: /health, port: http }, periodSeconds: 5 }
+          livenessProbe:  { httpGet: { path: /health, port: http }, periodSeconds: 20 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: docai-api
+  namespace: docai
+spec:
+  selector: { app: docai, role: api }
+  ports: [{ port: 80, targetPort: http, name: http }]
+---
+# API tier HPA — scales on CPU AND on external requests-per-second.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: docai-api
+  namespace: docai
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: docai-api }
+  minReplicas: 3
+  maxReplicas: 50
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }
+    - type: Pods
+      pods:
+        metric: { name: http_requests_per_second }
+        target: { type: AverageValue, averageValue: "200" }
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 15
+      policies: [{ type: Percent, value: 100, periodSeconds: 30 }]
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies: [{ type: Percent, value: 50, periodSeconds: 60 }]

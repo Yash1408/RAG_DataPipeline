@@ -1,0 +1,36 @@
+# --- Core extraction ---
+pdfplumber>=0.11.0
+rank-bm25>=0.2.2
+numpy>=1.26.0
+
+# --- Local LLM + embeddings (runs on CPU; GPU optional) ---
+sentence-transformers>=3.0.0
+# transformers pulls in a zoedepth submodule that eagerly imports
+# torchvision at load time; pinning torchvision here avoids the
+# `ModuleNotFoundError: No module named 'torchvision'` that pip's
+# resolver otherwise lets slip through on fresh envs.
+torch>=2.2.0
+torchvision>=0.17.0
+ollama>=0.3.0              # talks to a local Ollama daemon; optional
+
+# --- Streamlit demo ---
+streamlit>=1.36.0
+
+# --- Caching (local disk, swap to Redis in prod) ---
+diskcache>=5.6.0
+
+# --- Production API (pipeline/app) ---
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+python-multipart>=0.0.9
+slowapi>=0.1.9
+celery>=5.4.0
+redis>=5.0.0
+pybreaker>=1.2.0           # circuit breaker
+
+# --- Observability ---
+prometheus-client>=0.20.0
+opentelemetry-api>=1.25.0
+opentelemetry-sdk>=1.25.0

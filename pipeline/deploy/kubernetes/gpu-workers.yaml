@@ -1,0 +1,76 @@
+# GPU worker pool — runs Ollama (or vLLM) locally on each node, so the
+# LLM call is a same-node HTTP call (no egress). HPA scales on queue depth,
+# Karpenter scales the underlying GPU nodes based on pending pods, so idle
+# GPU time goes to zero when traffic drops.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docai-gpu-worker
+  namespace: docai
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: docai, role: gpu-worker } }
+  template:
+    metadata:
+      labels: { app: docai, role: gpu-worker }
+    spec:
+      nodeSelector: { node.kubernetes.io/instance-type: g5.xlarge }
+      tolerations: [{ key: nvidia.com/gpu, operator: Exists, effect: NoSchedule }]
+      containers:
+        - name: worker
+          image: ghcr.io/acme/docai-worker:1.0.0
+          command: ["celery", "-A", "app.workers.celery_app", "worker",
+                    "-Q", "extract", "--concurrency=2", "--prefetch-multiplier=1"]
+          env:
+            - { name: OLLAMA_HOST, value: http://localhost:11434 }
+            - { name: OLLAMA_MODEL, value: "llama3.1:8b" }
+            - { name: CELERY_BROKER_URL, value: redis://redis:6379/0 }
+            - { name: CACHE_BACKEND, value: redis }
+            - { name: REDIS_URL, value: redis://redis:6379/2 }
+          resources:
+            limits: { nvidia.com/gpu: "1", memory: "16Gi", cpu: "4" }
+        - name: ollama
+          image: ollama/ollama:0.3.12
+          ports: [{ containerPort: 11434 }]
+          resources:
+            limits: { nvidia.com/gpu: "1", memory: "16Gi" }
+          volumeMounts: [{ name: models, mountPath: /root/.ollama }]
+      volumes:
+        - name: models
+          persistentVolumeClaim: { claimName: ollama-models }
+---
+# Worker HPA — scales on Redis queue depth (KEDA ScaledObject).
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: docai-gpu-worker
+  namespace: docai
+spec:
+  scaleTargetRef: { name: docai-gpu-worker }
+  minReplicaCount: 0          # scale to zero when idle — no paying for idle GPUs
+  maxReplicaCount: 20
+  cooldownPeriod: 120
+  triggers:
+    - type: redis
+      metadata:
+        address: redis:6379
+        listName: "celery.extract"
+        listLength: "5"        # 1 new pod per 5 queued jobs
+---
+# Karpenter provisioner — brings up g5.xlarge nodes on demand.
+apiVersion: karpenter.sh/v1beta1
+kind: NodePool
+metadata: { name: gpu-pool }
+spec:
+  template:
+    spec:
+      requirements:
+        - { key: "karpenter.k8s.aws/instance-gpu-manufacturer", operator: In, values: ["nvidia"] }
+        - { key: "karpenter.k8s.aws/instance-family",            operator: In, values: ["g5", "g6"] }
+        - { key: "karpenter.sh/capacity-type",                   operator: In, values: ["on-demand", "spot"] }
+      taints: [{ key: nvidia.com/gpu, effect: NoSchedule }]
+  disruption:
+    consolidationPolicy: WhenUnderutilized
+    expireAfter: 24h
+  limits: { cpu: 2000, "nvidia.com/gpu": 40 }
