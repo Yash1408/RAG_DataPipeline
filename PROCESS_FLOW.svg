@@ -1,0 +1,359 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1480 1400" font-family="-apple-system, Segoe UI, Inter, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#059669"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/>
+    </marker>
+    <marker id="arrow-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#d97706"/>
+    </marker>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000" flood-opacity="0.12"/>
+    </filter>
+    <style>
+      .title    { font-size:22px; font-weight:700; fill:#0f172a; }
+      .sub      { font-size:12px; fill:#64748b; }
+      .stage    { font-size:11px; font-weight:700; fill:#334155; letter-spacing:1px; text-transform:uppercase; }
+      .box      { font-size:13px; font-weight:600; fill:#0f172a; }
+      .small    { font-size:11px; fill:#475569; }
+      .tiny     { font-size:10px; fill:#64748b; }
+      .edge     { font-size:10px; font-weight:600; fill:#475569; }
+      .edge-g   { font-size:10px; font-weight:600; fill:#059669; }
+      .edge-r   { font-size:10px; font-weight:600; fill:#dc2626; }
+      .edge-a   { font-size:10px; font-weight:600; fill:#d97706; }
+      .happy    { stroke:#475569; stroke-width:1.8; fill:none; }
+      .cache    { stroke:#059669; stroke-width:1.8; fill:none; stroke-dasharray: 4 3; }
+      .fail     { stroke:#dc2626; stroke-width:1.8; fill:none; stroke-dasharray: 6 3; }
+      .degrade  { stroke:#d97706; stroke-width:1.8; fill:none; stroke-dasharray: 6 3; }
+      .module   { font-size:10px; font-style:italic; fill:#6366f1; }
+    </style>
+  </defs>
+
+  <!-- Header -->
+  <text x="40" y="42" class="title">Process Flow — Per-Request Extraction Pipeline</text>
+  <text x="40" y="62" class="sub">PDF upload → page-citations JSON · zero-hallucination gate · every failure has a named fallback</text>
+
+  <!-- ===================== CLIENT / INGRESS ===================== -->
+  <text x="40" y="100" class="stage">1 · Client → ingress</text>
+
+  <g filter="url(#shadow)">
+    <rect x="60" y="112" width="220" height="64" rx="8" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+    <text x="76" y="136" class="box">Client upload</text>
+    <text x="76" y="154" class="small">POST /v1/extract · multipart</text>
+    <text x="76" y="170" class="small">Bearer JWT · MIME=application/pdf</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="330" y="112" width="240" height="64" rx="8" fill="#fff7ed" stroke="#f97316" stroke-width="1.5"/>
+    <text x="346" y="136" class="box">Kong gateway</text>
+    <text x="346" y="154" class="small">JWT verify · per-tenant rate-limit</text>
+    <text x="346" y="170" class="small">size 32MB · correlation-id injected</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="620" y="112" width="240" height="64" rx="8" fill="#fef2f2" stroke="#ef4444" stroke-width="1.5"/>
+    <text x="636" y="136" class="box">FastAPI · /extract</text>
+    <text x="636" y="154" class="small">sha256(pdf) · idempotency</text>
+    <text x="636" y="170" class="small">returns 202 { job_id }</text>
+  </g>
+
+  <!-- FastAPI internals -->
+  <g filter="url(#shadow)">
+    <rect x="900" y="92" width="250" height="104" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="1.2"/>
+    <text x="916" y="114" class="box">API actions (synchronous)</text>
+    <text x="916" y="134" class="small">1. Put raw PDF → S3 (key=sha256)</text>
+    <text x="916" y="150" class="small">2. store.enqueue(doc_id, sha256)</text>
+    <text x="916" y="166" class="small">3. celery.send_task("extract")</text>
+    <text x="916" y="182" class="small">4. respond 202 + Location header</text>
+  </g>
+
+  <!-- Arrows 1→3 -->
+  <path class="happy" d="M 280 144 H 330" marker-end="url(#arrow)"/>
+  <path class="happy" d="M 570 144 H 620" marker-end="url(#arrow)"/>
+  <path class="happy" d="M 860 144 H 900" marker-end="url(#arrow)"/>
+
+  <!-- ===================== QUEUE ===================== -->
+  <text x="40" y="230" class="stage">2 · Queue</text>
+
+  <g filter="url(#shadow)">
+    <rect x="60" y="242" width="800" height="68" rx="8" fill="#f0f9ff" stroke="#0284c7" stroke-width="1.5"/>
+    <text x="80" y="264" class="box">Redis broker — `extract.free` | `extract.premium`</text>
+    <text x="80" y="282" class="small">task_acks_late · prefetch=1 · KEDA watches queue depth · workers 0 → 20</text>
+    <text x="80" y="300" class="small">If all workers full: new job waits in queue (FIFO within priority class) — no drops, no back-pressure to client</text>
+  </g>
+
+  <path class="happy" d="M 740 196 V 242" marker-end="url(#arrow)"/>
+
+  <!-- ===================== WORKER PICKUP ===================== -->
+  <text x="40" y="340" class="stage">3 · Worker picks up · parse + cache</text>
+
+  <!-- Parse cache check -->
+  <g filter="url(#shadow)">
+    <rect x="60" y="352" width="260" height="80" rx="8" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.5"/>
+    <text x="76" y="374" class="box">Cache lookup</text>
+    <text x="76" y="392" class="small">key = parse:sha256(pdf)</text>
+    <text x="76" y="408" class="small">Redis GET · content-addressed</text>
+    <text x="76" y="424" class="edge-g">hit → skip re-parse (saves 2–8s)</text>
+  </g>
+
+  <!-- Decision: parse cached? -->
+  <g filter="url(#shadow)">
+    <polygon points="400,352 540,392 400,432 260,392" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5"/>
+    <text x="400" y="388" class="box" text-anchor="middle">Parse cached?</text>
+    <text x="400" y="404" class="tiny" text-anchor="middle">TableBlocks present?</text>
+  </g>
+
+  <!-- pdfplumber parse -->
+  <g filter="url(#shadow)">
+    <rect x="600" y="352" width="280" height="80" rx="8" fill="#faf5ff" stroke="#9333ea" stroke-width="1.5"/>
+    <text x="616" y="374" class="box">pdfplumber parse + tagger</text>
+    <text x="616" y="392" class="small">TableBlock(header, rows, page_no)</text>
+    <text x="616" y="408" class="small">Item/Note state machine stamps page</text>
+    <text x="616" y="424" class="module">engine/layout_parser.py</text>
+  </g>
+
+  <!-- OCR fallback -->
+  <g filter="url(#shadow)">
+    <rect x="920" y="352" width="260" height="80" rx="8" fill="#fef2f2" stroke="#dc2626" stroke-width="1.2"/>
+    <text x="936" y="374" class="box">OCR fallback</text>
+    <text x="936" y="392" class="small">if text_density &lt; 0.05 chars/kpx²</text>
+    <text x="936" y="408" class="small">AWS Textract via CB · timeout 30s</text>
+    <text x="936" y="424" class="edge-a">breaker open → mark page `no_text`</text>
+  </g>
+
+  <path class="happy" d="M 320 392 H 260" marker-end="url(#arrow)"/>
+  <path class="cache" d="M 540 392 H 600" marker-end="url(#arrow-green)"/>
+  <text x="550" y="384" class="edge">MISS</text>
+  <path class="cache" d="M 470 352 V 310 H 200 V 352" marker-end="url(#arrow-green)"/>
+  <text x="330" y="304" class="edge-g">HIT → straight to retrieval</text>
+
+  <!-- parse → ocr check -->
+  <path class="degrade" d="M 880 392 H 920" marker-end="url(#arrow-amber)"/>
+  <text x="885" y="384" class="edge-a">if scanned</text>
+
+  <!-- ===================== RETRIEVAL ===================== -->
+  <text x="40" y="470" class="stage">4 · Hybrid retrieval — per field</text>
+
+  <g filter="url(#shadow)">
+    <rect x="60" y="482" width="260" height="100" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+    <text x="76" y="504" class="box">Field spec loop</text>
+    <text x="76" y="522" class="small">for spec in AMAZON_10K_FIELDS:</text>
+    <text x="76" y="538" class="small">  anchor_terms, predicate, primitive</text>
+    <text x="76" y="554" class="small">  max_candidate_pages = k</text>
+    <text x="76" y="570" class="module">engine/fields.py · patterns.py</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="340" y="482" width="240" height="100" rx="8" fill="#f0fdfa" stroke="#0d9488" stroke-width="1.5"/>
+    <text x="356" y="504" class="box">BM25</text>
+    <text x="356" y="522" class="small">rank-bm25 · page-level docs</text>
+    <text x="356" y="538" class="small">exact term matches surface first</text>
+    <text x="356" y="554" class="small">("Fulfillment equipment")</text>
+    <text x="356" y="570" class="module">rank_bm25</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="600" y="482" width="240" height="100" rx="8" fill="#f0fdfa" stroke="#0d9488" stroke-width="1.5"/>
+    <text x="616" y="504" class="box">Dense embeddings</text>
+    <text x="616" y="522" class="small">sentence-transformers MiniLM-L6</text>
+    <text x="616" y="538" class="small">cache: emb:model:sha256(text)</text>
+    <text x="616" y="554" class="small">concept/semantic matches</text>
+    <text x="616" y="570" class="module">engine/local_embeddings.py</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="860" y="482" width="280" height="100" rx="8" fill="#ecfeff" stroke="#0891b2" stroke-width="1.5"/>
+    <text x="876" y="504" class="box">RRF fusion → candidate pages</text>
+    <text x="876" y="522" class="small">rank_bm25 ⊕ rank_emb via reciprocal</text>
+    <text x="876" y="538" class="small">rank fusion · top-k pages returned</text>
+    <text x="876" y="554" class="small">pages that score on BOTH win</text>
+    <text x="876" y="570" class="module">engine/retriever.py</text>
+  </g>
+
+  <path class="happy" d="M 320 532 H 340" marker-end="url(#arrow)"/>
+  <path class="happy" d="M 580 532 H 600" marker-end="url(#arrow)"/>
+  <path class="happy" d="M 840 532 H 860" marker-end="url(#arrow)"/>
+
+  <!-- ===================== EXTRACTION ===================== -->
+  <text x="40" y="620" class="stage">5 · Extraction — attempt LLM first, fall through to deterministic</text>
+
+  <!-- LLM path -->
+  <g filter="url(#shadow)">
+    <rect x="60" y="632" width="280" height="130" rx="8" fill="#faf5ff" stroke="#9333ea" stroke-width="1.5"/>
+    <text x="76" y="654" class="box">A · LLM-grounded extract</text>
+    <text x="76" y="672" class="small">Ollama llama3.1 / vLLM Llama-70B</text>
+    <text x="76" y="688" class="small">temp=0 · JSON-schema constrained</text>
+    <text x="76" y="704" class="small">prompt has page_text + question only</text>
+    <text x="76" y="720" class="small">cache: llm:model:sha256(q,page)</text>
+    <text x="76" y="738" class="small">breaker: LLM_BREAKER (pybreaker)</text>
+    <text x="76" y="754" class="module">engine/llm_client.py</text>
+  </g>
+
+  <!-- Decision: breaker -->
+  <g filter="url(#shadow)">
+    <polygon points="460,632 620,695 460,762 300,695" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5"/>
+    <text x="460" y="688" class="box" text-anchor="middle">Breaker open</text>
+    <text x="460" y="706" class="box" text-anchor="middle">OR LLM failed?</text>
+  </g>
+
+  <!-- Deterministic -->
+  <g filter="url(#shadow)">
+    <rect x="640" y="632" width="280" height="130" rx="8" fill="#f0fdf4" stroke="#059669" stroke-width="1.5"/>
+    <text x="656" y="654" class="box">B · Deterministic primitive</text>
+    <text x="656" y="672" class="small">patterns.py: extract_row_rightmost_money</text>
+    <text x="656" y="688" class="small">extract_phrase_with_integer</text>
+    <text x="656" y="704" class="small">extract_row_value_by_label</text>
+    <text x="656" y="720" class="small">Zero literal values · year-agnostic</text>
+    <text x="656" y="738" class="small">Always available · no external deps</text>
+    <text x="656" y="754" class="module">engine/patterns.py · fields.py</text>
+  </g>
+
+  <!-- Per-field candidate -->
+  <g filter="url(#shadow)">
+    <rect x="950" y="632" width="280" height="130" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="1.2"/>
+    <text x="966" y="654" class="box">Field candidate produced</text>
+    <text x="966" y="672" class="small">{ value, page_no, item_title,</text>
+    <text x="966" y="688" class="small">  note_title, method, model }</text>
+    <text x="966" y="708" class="small">method ∈ {llm, deterministic}</text>
+    <text x="966" y="724" class="small">→ Next: verification gate</text>
+  </g>
+
+  <path class="happy" d="M 340 695 H 300" marker-end="url(#arrow)"/>
+  <path class="happy" d="M 620 695 H 640" marker-end="url(#arrow)"/>
+  <text x="624" y="688" class="edge">YES</text>
+  <path class="happy" d="M 920 695 H 950" marker-end="url(#arrow)"/>
+  <!-- LLM success direct -->
+  <path class="happy" d="M 340 720 Q 420 780 950 720" marker-end="url(#arrow)"/>
+  <text x="420" y="776" class="edge">NO (LLM returned value)</text>
+
+  <!-- ===================== VERIFICATION ===================== -->
+  <text x="40" y="800" class="stage">6 · Verbatim verification gate — THE hallucination guard</text>
+
+  <g filter="url(#shadow)">
+    <rect x="60" y="812" width="420" height="140" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+    <text x="76" y="834" class="box">verify_verbatim(value, page_text)</text>
+    <text x="76" y="852" class="small">normalize whitespace on both sides</text>
+    <text x="76" y="868" class="small">assert value ⊂ page_text (substring)</text>
+    <text x="76" y="884" class="small">if False → reject candidate, no paraphrase</text>
+    <text x="76" y="902" class="small">Citation payload captured:</text>
+    <text x="86" y="918" class="tiny">page · item_title · note_title · surrounding_text · method · model</text>
+    <text x="76" y="938" class="module">engine/verify.py</text>
+  </g>
+
+  <!-- Decision diamond -->
+  <g filter="url(#shadow)">
+    <polygon points="640,812 820,882 640,952 460,882" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5"/>
+    <text x="640" y="876" class="box" text-anchor="middle">Value found on</text>
+    <text x="640" y="894" class="box" text-anchor="middle">cited page?</text>
+  </g>
+
+  <!-- Accepted path -->
+  <g filter="url(#shadow)">
+    <rect x="870" y="812" width="360" height="140" rx="8" fill="#ecfdf5" stroke="#059669" stroke-width="1.5"/>
+    <text x="886" y="834" class="box">Accept</text>
+    <text x="886" y="852" class="small">Append to extractions list</text>
+    <text x="886" y="868" class="small">method tag preserved for audit</text>
+    <text x="886" y="884" class="small">Move to next field in spec loop</text>
+    <text x="886" y="906" class="edge-g">⇨ this is the only way a value</text>
+    <text x="886" y="922" class="edge-g">   reaches the caller</text>
+  </g>
+
+  <path class="happy" d="M 480 882 H 460" marker-end="url(#arrow)"/>
+  <path class="happy" d="M 820 882 H 870" marker-end="url(#arrow)"/>
+  <text x="828" y="876" class="edge-g">YES</text>
+
+  <!-- Retry / next candidate page -->
+  <g filter="url(#shadow)">
+    <rect x="460" y="985" width="360" height="80" rx="8" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5"/>
+    <text x="476" y="1008" class="box">Drop candidate · try next page</text>
+    <text x="476" y="1026" class="small">Walk RRF-ranked list to k+1, k+2, ...</text>
+    <text x="476" y="1042" class="small">NO re-prompt-with-hint · NO paraphrase</text>
+    <text x="476" y="1058" class="module">if all candidates fail → field = not_found</text>
+  </g>
+
+  <path class="fail" d="M 640 952 V 985" marker-end="url(#arrow-red)"/>
+  <text x="650" y="974" class="edge-r">NO</text>
+  <path class="fail" d="M 460 1025 H 220 V 720 H 300" marker-end="url(#arrow-red)"/>
+  <text x="230" y="712" class="edge-r">retry next page</text>
+
+  <!-- ===================== PERSIST ===================== -->
+  <text x="40" y="1100" class="stage">7 · Persist · return</text>
+
+  <g filter="url(#shadow)">
+    <rect x="60" y="1112" width="300" height="100" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+    <text x="76" y="1134" class="box">store.mark_completed(doc_id)</text>
+    <text x="76" y="1152" class="small">insert rows into `extractions` table</text>
+    <text x="76" y="1168" class="small">latency_s, pages, model recorded</text>
+    <text x="76" y="1184" class="small">Postgres (prod) / SQLite (local)</text>
+    <text x="76" y="1202" class="module">engine/store.py</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="390" y="1112" width="300" height="100" rx="8" fill="#ecfdf5" stroke="#059669" stroke-width="1.5"/>
+    <text x="406" y="1134" class="box">Return payload</text>
+    <text x="406" y="1152" class="small">GET /v1/extract/{job_id}</text>
+    <text x="406" y="1168" class="small">200 { document, extractions[] }</text>
+    <text x="406" y="1184" class="small">WebSocket push (prod)</text>
+    <text x="406" y="1202" class="small">or poll (Streamlit / simple clients)</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="720" y="1112" width="300" height="100" rx="8" fill="#fefce8" stroke="#ca8a04" stroke-width="1.5"/>
+    <text x="736" y="1134" class="box">Observability emit</text>
+    <text x="736" y="1152" class="small">Prometheus: extraction_latency,</text>
+    <text x="736" y="1168" class="small">verbatim_verification_failures_total</text>
+    <text x="736" y="1184" class="small">OTel span closed · correlation-id</text>
+    <text x="736" y="1202" class="small">Audit row → Postgres (WORM via S3 lock)</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="1050" y="1112" width="380" height="100" rx="8" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+    <text x="1066" y="1134" class="box">Dashboard (Streamlit / Grafana)</text>
+    <text x="1066" y="1152" class="small">live counters: Queued / Processing /</text>
+    <text x="1066" y="1168" class="small">Completed / Failed / In flight</text>
+    <text x="1066" y="1184" class="small">row drill-in: extractions OR error reason</text>
+    <text x="1066" y="1202" class="module">streamlit_app.py · engine/store.py</text>
+  </g>
+
+  <path class="happy" d="M 1050 882 V 1160 H 1050" />
+  <path class="happy" d="M 1050 882 V 1160" marker-end="url(#arrow)"/>
+  <path class="happy" d="M 360 1160 H 390" marker-end="url(#arrow)"/>
+  <path class="happy" d="M 690 1160 H 720" marker-end="url(#arrow)"/>
+
+  <!-- ===================== FAILURE CAPTURE ===================== -->
+  <g filter="url(#shadow)">
+    <rect x="870" y="985" width="360" height="100" rx="8" fill="#fff1f2" stroke="#dc2626" stroke-width="1.5"/>
+    <text x="886" y="1007" class="box">Whole-job failure</text>
+    <text x="886" y="1025" class="small">Any uncaught exception in worker:</text>
+    <text x="886" y="1041" class="small">store.mark_failed(doc_id, "{type}: {msg}")</text>
+    <text x="886" y="1057" class="small">red row in Dashboard · reason preview</text>
+    <text x="886" y="1073" class="small">No silent drops · client polls → 500 + reason</text>
+  </g>
+
+  <path class="fail" d="M 820 952 Q 860 975 890 985" marker-end="url(#arrow-red)"/>
+
+  <!-- ===================== LEGEND ===================== -->
+  <g transform="translate(40, 1260)">
+    <text x="0" y="0" class="stage">Legend</text>
+    <line x1="0" y1="20" x2="30" y2="20" class="happy" marker-end="url(#arrow)"/>
+    <text x="38" y="24" class="small">happy path</text>
+
+    <line x1="160" y1="20" x2="190" y2="20" class="cache" marker-end="url(#arrow-green)"/>
+    <text x="198" y="24" class="small">cache hit / reuse</text>
+
+    <line x1="340" y1="20" x2="370" y2="20" class="degrade" marker-end="url(#arrow-amber)"/>
+    <text x="378" y="24" class="small">degraded (OCR / slow path)</text>
+
+    <line x1="580" y1="20" x2="610" y2="20" class="fail" marker-end="url(#arrow-red)"/>
+    <text x="618" y="24" class="small">failure / retry / drop</text>
+
+    <text x="0" y="50" class="small"><tspan font-weight="700">Contract.</tspan> A value can ONLY reach the caller after verify_verbatim returns True. Every other path drops the candidate (retry next page) or drops the whole job (red in dashboard).</text>
+    <text x="0" y="68" class="small"><tspan font-weight="700">Degrade, never fabricate.</tspan> LLM breaker open → deterministic primitive. OCR breaker open → page marked `no_text` and retrieval moves on. Job exception → store.mark_failed + visible reason. Never a silent "confident wrong answer".</text>
+  </g>
+</svg>

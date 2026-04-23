@@ -16,7 +16,8 @@ GPU-autoscaled.
 | `engine/` | Shared extraction engine — used by both Streamlit and the production workers. |
 | `extraction_output.json` | **Deliverable 2.** Final JSON payload (5 extractions + citations). |
 | `ARCHITECTURE.md` | **Deliverable 1 (text).** Full production architecture. |
-| `ARCHITECTURE_DIAGRAM.svg` | **Deliverable 1 (diagram).** Single-page visual. |
+| `ARCHITECTURE_DIAGRAM.svg` | **Deliverable 1 (diagram).** Single-page visual of the production stack. |
+| `PROCESS_FLOW.svg` | **Deliverable 1 (flow).** End-to-end request pipeline — upload → parse → retrieve → extract → verify → persist, with failure/degrade paths. |
 | `DEBRIEF.md` | **Deliverable 3.** The hardest technical challenge in this document. |
 | `pipeline/` | Production stack — FastAPI + Celery + JWT + Kong + Kubernetes manifests. |
 | `requirements.txt` | Python dependencies. |
@@ -225,6 +226,9 @@ kubectl apply -f pipeline/deploy/kubernetes/api-deployment.yaml
 kubectl apply -f pipeline/deploy/kubernetes/gpu-workers.yaml
 ```
 
-See `ARCHITECTURE.md` and `ARCHITECTURE_DIAGRAM.svg` for the full picture
-of the production stack (API gateway, message queue, circuit breakers,
-GPU autoscaling, observability, security model).
+See `ARCHITECTURE.md`, `ARCHITECTURE_DIAGRAM.svg`, and `PROCESS_FLOW.svg`
+for the full picture: the first two cover the production stack (API
+gateway, message queue, circuit breakers, GPU autoscaling, observability,
+security model); the third walks the per-request pipeline from upload
+through the verbatim gate and into the store, including every
+degrade/failure fork.
