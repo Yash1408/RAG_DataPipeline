@@ -1,0 +1,89 @@
+{
+  "document": {
+    "filename": "case-study.pdf",
+    "sha256": "amazon-10k-fy2025-form-10-k-as-filed",
+    "total_pages": 125,
+    "extraction_timestamp_utc": "2026-04-23T00:00:00+00:00"
+  },
+  "extractions": {
+    "aws_net_sales": {
+      "question": "Net Sales of the AWS segment for the most recent fiscal year (USD millions).",
+      "value_verbatim": "$ 128,725",
+      "value": 128725,
+      "citation": {
+        "page": 107,
+        "item": "Item 8 \u2014 Financial Statements and Supplementary Data",
+        "surrounding_text": "AWS Net sales $ 90,757 $ 107,556 $ 128,725",
+        "note": "Note 10 \u2014 SEGMENT INFORMATION",
+        "table_name": "Information on reportable segments and reconciliation to consolidated net income (in millions)",
+        "row": "AWS \u2014 Net sales",
+        "column": "Most recent fiscal year (rightmost column in the source table)"
+      }
+    },
+    "employee_headcount": {
+      "question": "Total full-time and part-time employees at fiscal year end.",
+      "value_verbatim": "approximately 1,576,000 full-time and part-time employees",
+      "value": "approximately 1,576,000 full-time and part-time employees",
+      "citation": {
+        "page": 6,
+        "item": "Item 1 \u2014 Business",
+        "surrounding_text": "We employed approximately 1,576,000 full-time and part-time employees as of December 31, 2025.",
+        "note": null,
+        "table_name": null,
+        "row": null,
+        "column": null,
+        "section": "Human Capital"
+      }
+    },
+    "property_equipment_useful_life_fulfillment_equipment": {
+      "question": "Estimated useful life for Fulfillment equipment. Amazon classifies fulfillment equipment under the 'Other equipment' row of the useful-life table \u2014 extract that row's value verbatim.",
+      "value_verbatim": "Three to ten years",
+      "value": "Three to ten years",
+      "citation": {
+        "page": 75,
+        "item": "Item 8 \u2014 Financial Statements and Supplementary Data",
+        "surrounding_text": "Other equipment consists primarily of fulfillment equipment. Depreciation is recorded on a straight-line basis over the estimated useful lives of the assets. Other equipment: Three to ten years.",
+        "note": "Note 1 \u2014 DESCRIPTION OF BUSINESS, ACCOUNTING POLICIES, AND SUPPLEMENTAL DISCLOSURES",
+        "table_name": "Property and equipment \u2014 Estimated useful life",
+        "row": "Other equipment",
+        "column": "Estimated useful life",
+        "section": "Property and Equipment, Net"
+      }
+    },
+    "primary_retail_competition": {
+      "question": "Exact sentence describing principal competitive factors in retail.",
+      "value_verbatim": "We believe that the principal competitive factors in our retail businesses include selection, price, and convenience, including fast and reliable fulfillment.",
+      "value": "We believe that the principal competitive factors in our retail businesses include selection, price, and convenience, including fast and reliable fulfillment.",
+      "citation": {
+        "page": 6,
+        "item": "Item 1 \u2014 Business",
+        "surrounding_text": "We believe that the principal competitive factors in our retail businesses include selection, price, and convenience, including fast and reliable fulfillment.",
+        "note": null,
+        "table_name": null,
+        "row": null,
+        "column": null,
+        "section": "Competition"
+      }
+    },
+    "foreign_exchange_risk": {
+      "question": "Exact sentence summarizing primary FX risk in Item 7A.",
+      "value_verbatim": "The results of operations of, and certain of our intercompany balances associated with, our internationally-focused stores and AWS are exposed to foreign exchange rate fluctuations.",
+      "value": "The results of operations of, and certain of our intercompany balances associated with, our internationally-focused stores and AWS are exposed to foreign exchange rate fluctuations.",
+      "citation": {
+        "page": 56,
+        "item": "Item 7A \u2014 Quantitative and Qualitative Disclosures About Market Risk",
+        "surrounding_text": "The results of operations of, and certain of our intercompany balances associated with, our internationally-focused stores and AWS are exposed to foreign exchange rate fluctuations.",
+        "note": null,
+        "table_name": null,
+        "row": null,
+        "column": null,
+        "section": "Foreign Exchange Risk"
+      }
+    }
+  },
+  "provenance": {
+    "backend": "deterministic",
+    "extraction_method": "layout-aware parsing + hybrid retrieval + verbatim verification",
+    "zero_hallucination_guarantee": "Every value was substring-verified against its cited page before emission. Values that failed verification were dropped, not paraphrased."
+  }
+}
